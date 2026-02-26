@@ -1,0 +1,34 @@
+PersonalInfo: {'full_name': 'Lê Tuấn Kiệt', 'applied_position': 'AI Engineer'}
+WorkExperience: {'company': 'SUn*', 'title': 'AI Engineer', 'duration': '3 năm'}
+FitAssessment: {'relevant_skills': 'Chuyên dùng langchain, python', 'reason_for_leaving': 'tôi muốn tìm thử thách mới', 'expected_salary': '100tr'}
+AdditionalInfo: {'availability': 'Có thể nhận việc ngay', 'start_date': '2024-06-20'}
+ClosingNotes: {'candidate_questions': ['Công ty bạn làm về lĩnh vực gì?', 'Tôi sẽ làm dự án gì khi tham gia?']}
+PersonalInfo: {'full_name': 'Lê Tuấn Kiệt', 'applied_position': 'AI Engineer'}
+PersonalInfo: {'full_name': 'Lê TUấn Kiệt', 'applied_position': 'AI Engineer'}
+WorkExperience: {'company': 'Sun*', 'title': 'AI Engineer', 'duration': '4 năm'}
+FitAssessment: {'relevant_skills': 'Code Python', 'reason_for_leaving': 'Không thích công việc cũ', 'expected_salary': '20tr'}
+AdditionalInfo: {'availability': 'Có thể nhận việc ngay', 'start_date': '2024-04-27'}
+ClosingNotes: {'candidate_questions': ['Công ty bạn là làm về gì ?', 'Tôi vào công ty sẽ làm gì']}
+PersonalInfo: {'full_name': 'Tuấn Kiệt', 'applied_position': 'BackEnd'}
+WorkExperience: {'company': 'Sun*', 'title': 'Ai Engineer', 'duration': '3 năm'}
+FitAssessment: {'relevant_skills': 'Python, phát triển chatbot', 'reason_for_leaving': 'tôi chán', 'expected_salary': '200tr'}
+AdditionalInfo: {'availability': 'có thể nhận việc ngay', 'start_date': 'ngày mai'}
+ClosingNotes: {'candidate_questions': ['tôi muốn hỏi tôi sẽ làm gì trong công ty']}
+PersonalInfo: {'full_name': 'LE Kiệt', 'applied_position': 'Frontend'}
+WorkExperience: {'company': 'Sun*', 'title': 'Ai Engineer', 'duration': '5 năm'}
+FitAssessment: {'relevant_skills': 'python, langchain, code chatbot cho nhiều big tech', 'reason_for_leaving': 'chán', 'expected_salary': '100tr'}
+AdditionalInfo: {'availability': 'Sẵn sàng nhận việc', 'start_date': 'mai'}
+PersonalInfo: {'full_name': 'Lê Kiệt', 'applied_position': 'AI engineer'}
+WorkExperience: {'company': 'Sun*', 'title': 'AI', 'duration': '4 năm'}
+FitAssessment: {'relevant_skills': 'Code chatbot cho nhiều big tech, sử dụng python', 'reason_for_leaving': 'Tôi chán mong sang cty mới sẽ vui hơn', 'expected_salary': '10tr'}
+AdditionalInfo: {'availability': 'có thể nhận việc ngay', 'start_date': '2024-06-05'}
+PersonalInfo: {'full_name': 'Lê Kiệt', 'applied_position': 'AI engineer'}
+WorkExperience: {'company': 'Sun*', 'title': 'AI engineer', 'duration': '10 năm'}
+FitAssessment: {'relevant_skills': 'làm chatbot bằng Python, sử dụng Langchain, đã làm cho nhiều bigtech', 'reason_for_leaving': 'thấy công việc không phù hợp nữa', 'expected_salary': '100tr'}
+AdditionalInfo: {'availability': 'Có thể nhận việc sớm', 'start_date': '2024-04-26'}
+ClosingNotes: {'candidate_questions': ['Tôi muốn biết vào công ty sẽ làm gì.', 'Tôi muốn làm dự án khách hàng Mỹ.']}
+PersonalInfo: {'full_name': 'Lê Tuấn Kiệt', 'applied_position': 'AI Engineer'}
+WorkExperience: {'company': 'SUn*', 'title': 'AI Engineer', 'duration': '1 năm'}
+FitAssessment: {'relevant_skills': 'Làm chatbot, sử dụng Python và Langchain', 'reason_for_leaving': 'Chán công ty cũ vì không phù hợp', 'expected_salary': '20 triệu'}
+AdditionalInfo: {'availability': 'sẵn sàng nhận việc', 'start_date': '31/03/2026'}
+ClosingNotes: {'candidate_questions': ['Tôi muốn biết tôi sẽ được làm gì tỏng công ty']}
