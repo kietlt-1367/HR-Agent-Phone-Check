@@ -5,7 +5,7 @@ from livekit.agents import AgentSession, inference, llm
 from tasks.personal_info import PersonalInfoTask
 
 # Load environment variables from .env.local
-load_dotenv(find_dotenv('.env.local'), override=True)
+load_dotenv(find_dotenv(".env.local"), override=True)
 
 
 def _llm() -> llm.LLM:

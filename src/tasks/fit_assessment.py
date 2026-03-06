@@ -3,6 +3,7 @@
 import logging
 
 from livekit.agents import AgentTask, function_tool
+
 from models.models import FitAssessment
 from tasks.utils import save_to_storage
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class FitAssessmentTask(AgentTask[FitAssessment]):
     """Task to assess candidate's fit for the position."""
-    
+
     def __init__(self):
         super().__init__(
             instructions="""
@@ -42,15 +43,23 @@ class FitAssessmentTask(AgentTask[FitAssessment]):
         expected_salary: str,
     ):
         """Ghi nhận đánh giá mức độ phù hợp của ứng viên"""
-        if not relevant_skills.strip() or not reason_for_leaving.strip() or not expected_salary.strip():
+        if (
+            not relevant_skills.strip()
+            or not reason_for_leaving.strip()
+            or not expected_salary.strip()
+        ):
             await self.session.generate_reply(
                 instructions="Xin lỗi, bạn vui lòng cung cấp đầy đủ thông tin về kỹ năng, lý do rời khỏi công việc, và mức lương kỳ vọng."
             )
             return
-        
-        logger.info("Collected fit assessment: relevant_skills=%s, reason_for_leaving=%s, expected_salary=%s", 
-                   relevant_skills, reason_for_leaving, expected_salary)
-        
+
+        logger.info(
+            "Collected fit assessment: relevant_skills=%s, reason_for_leaving=%s, expected_salary=%s",
+            relevant_skills,
+            reason_for_leaving,
+            expected_salary,
+        )
+
         # Save to session storage
         save_to_storage(
             self.session,
@@ -58,10 +67,10 @@ class FitAssessmentTask(AgentTask[FitAssessment]):
             {
                 "relevant_skills": relevant_skills,
                 "reason_for_leaving": reason_for_leaving,
-                "expected_salary": expected_salary
-            }
+                "expected_salary": expected_salary,
+            },
         )
-        
+
         self.complete(
             FitAssessment(
                 relevant_skills=relevant_skills,

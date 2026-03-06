@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import List
 from datetime import datetime
 
 from models.data_storage import InterviewDataStorage, InterviewSession
@@ -8,6 +7,7 @@ from models.data_storage import InterviewDataStorage, InterviewSession
 @dataclass
 class SessionUserData:
     """Custom user data for agent session."""
+
     storage: InterviewDataStorage
     interview_session: InterviewSession
 
@@ -15,6 +15,7 @@ class SessionUserData:
 @dataclass
 class PersonalInfo:
     """Personal information collected from candidate."""
+
     full_name: str
     applied_position: str
 
@@ -22,6 +23,7 @@ class PersonalInfo:
 @dataclass
 class WorkExperience:
     """Work experience information."""
+
     company: str
     title: str
     duration: str
@@ -30,6 +32,7 @@ class WorkExperience:
 @dataclass
 class FitAssessment:
     """Assessment of candidate's fit for the position."""
+
     relevant_skills: str
     reason_for_leaving: str
     expected_salary: str
@@ -38,6 +41,7 @@ class FitAssessment:
 @dataclass
 class AdditionalInfo:
     """Additional information about availability."""
+
     availability: str
     start_date: str
 
@@ -45,12 +49,14 @@ class AdditionalInfo:
 @dataclass
 class ClosingNotes:
     """Closing notes and candidate questions."""
-    candidate_questions: List[str]
+
+    candidate_questions: list[str]
 
 
 @dataclass
 class CandidateScoring:
     """Standardized scoring rubric for candidates."""
+
     communication_score: float  # 1-10
     experience_fit_score: float  # 1-10
     salary_alignment_score: float  # 1-10
@@ -58,22 +64,26 @@ class CandidateScoring:
     communication_feedback: str
     experience_fit_feedback: str
     salary_alignment_feedback: str
-    
+
 
 @dataclass
 class InterviewSummary:
     """AI-generated interview summary and evaluation."""
-    strengths: List[str]  # Key strengths identified
-    concerns: List[str]   # Concerns or red flags
-    recommendation: str   # proceed / maybe / pass
-    summary_text: str     # Free-form summary
-    
+
+    strengths: list[str]  # Key strengths identified
+    concerns: list[str]  # Concerns or red flags
+    recommendation: str  # proceed / maybe / pass
+    summary_text: str  # Free-form summary
+
 
 @dataclass
 class InterviewAnalytics:
     """Analytics and timing data for interview."""
+
     total_duration_seconds: float
-    task_durations: dict = field(default_factory=dict)  # {"personal": 120, "experience": 180, ...}
+    task_durations: dict = field(
+        default_factory=dict
+    )  # {"personal": 120, "experience": 180, ...}
     start_time: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     end_time: str = ""
-    tasks_completed: List[str] = field(default_factory=list)
+    tasks_completed: list[str] = field(default_factory=list)

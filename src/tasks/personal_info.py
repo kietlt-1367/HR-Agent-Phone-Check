@@ -3,6 +3,7 @@
 import logging
 
 from livekit.agents import AgentTask, function_tool
+
 from models.models import PersonalInfo
 from tasks.utils import save_to_storage
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class PersonalInfoTask(AgentTask[PersonalInfo]):
     """Task to collect candidate's personal information."""
-    
+
     def __init__(self):
         super().__init__(
             instructions="""
@@ -35,7 +36,7 @@ class PersonalInfoTask(AgentTask[PersonalInfo]):
         await self.session.generate_reply(
             instructions="Chào ứng viên lịch sự, sau đó hỏi họ tên và vị trí ứng tuyển."
         )
-    
+
     @function_tool
     async def record_personal_info(self, full_name: str, applied_position: str):
         """Ghi nhận thông tin cá nhân của ứng viên"""
@@ -44,16 +45,20 @@ class PersonalInfoTask(AgentTask[PersonalInfo]):
                 instructions="Xin lỗi, bạn vui lòng cung cấp đầy đủ họ tên và vị trí ứng tuyển."
             )
             return
-        
-        logger.info("Collected personal info: full_name=%s, applied_position=%s", full_name, applied_position)
-        
+
+        logger.info(
+            "Collected personal info: full_name=%s, applied_position=%s",
+            full_name,
+            applied_position,
+        )
+
         # Save to session storage
         save_to_storage(
             self.session,
             "personal_info",
-            {"full_name": full_name, "applied_position": applied_position}
+            {"full_name": full_name, "applied_position": applied_position},
         )
-        
+
         self.complete(
             PersonalInfo(
                 full_name=full_name,

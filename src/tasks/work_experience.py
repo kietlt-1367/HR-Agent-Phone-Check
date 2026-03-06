@@ -3,6 +3,7 @@
 import logging
 
 from livekit.agents import AgentTask, function_tool
+
 from models.models import WorkExperience
 from tasks.utils import save_to_storage
 
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class WorkExperienceTask(AgentTask[WorkExperience]):
     """Task to collect candidate's work experience."""
-    
+
     def __init__(self):
         super().__init__(
             instructions="""
@@ -41,16 +42,21 @@ class WorkExperienceTask(AgentTask[WorkExperience]):
                 instructions="Xin lỗi, bạn vui lòng cung cấp đầy đủ thông tin công ty, vị trí và thời gian làm việc."
             )
             return
-        
-        logger.info("Collected work experience: company=%s, title=%s, duration=%s", company, title, duration)
-        
+
+        logger.info(
+            "Collected work experience: company=%s, title=%s, duration=%s",
+            company,
+            title,
+            duration,
+        )
+
         # Save to session storage
         save_to_storage(
             self.session,
             "work_experience",
-            {"company": company, "title": title, "duration": duration}
+            {"company": company, "title": title, "duration": duration},
         )
-        
+
         self.complete(
             WorkExperience(
                 company=company,

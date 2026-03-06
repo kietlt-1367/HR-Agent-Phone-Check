@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import aiohttp
 
@@ -20,15 +20,15 @@ logger = logging.getLogger(__name__)
 async def generate_summary_and_scoring(
     gemini_api_key: str,
     gemini_model: str,
-    personal_info: Optional[PersonalInfo],
-    work_experience: Optional[WorkExperience],
-    fit_assessment: Optional[FitAssessment],
-    additional_info: Optional[AdditionalInfo],
-    closing_notes: Optional[ClosingNotes],
+    personal_info: PersonalInfo | None,
+    work_experience: WorkExperience | None,
+    fit_assessment: FitAssessment | None,
+    additional_info: AdditionalInfo | None,
+    closing_notes: ClosingNotes | None,
 ) -> tuple[InterviewSummary, CandidateScoring]:
     """
     Generate interview summary and candidate scoring using LLM.
-    
+
     Args:
         gemini_api_key: Gemini API key
         gemini_model: Gemini model id (e.g. gemini-2.0-flash)
@@ -37,16 +37,18 @@ async def generate_summary_and_scoring(
         fit_assessment: Fit assessment results
         additional_info: Additional candidate info
         closing_notes: Candidate questions and closing remarks
-    
+
     Returns:
         Tuple of (InterviewSummary, CandidateScoring)
     """
-    
+
     # Prepare interview data for LLM analysis
     interview_data = {
         "personal": {
             "full_name": personal_info.full_name if personal_info else "Unknown",
-            "applied_position": personal_info.applied_position if personal_info else "Unknown",
+            "applied_position": personal_info.applied_position
+            if personal_info
+            else "Unknown",
         },
         "experience": {
             "company": work_experience.company if work_experience else None,
@@ -55,18 +57,26 @@ async def generate_summary_and_scoring(
         },
         "fit_assessment": {
             "skills": fit_assessment.relevant_skills if fit_assessment else None,
-            "reason_for_leaving": fit_assessment.reason_for_leaving if fit_assessment else None,
-            "expected_salary": fit_assessment.expected_salary if fit_assessment else None,
+            "reason_for_leaving": fit_assessment.reason_for_leaving
+            if fit_assessment
+            else None,
+            "expected_salary": fit_assessment.expected_salary
+            if fit_assessment
+            else None,
         },
         "availability": {
             "available": additional_info.availability if additional_info else None,
             "start_date": additional_info.start_date if additional_info else None,
         },
-        "candidate_questions": closing_notes.candidate_questions if closing_notes else [],
+        "candidate_questions": closing_notes.candidate_questions
+        if closing_notes
+        else [],
     }
-    
+
     if not gemini_api_key:
-        logger.warning("GEMINI_API_KEY is not configured. Returning fallback summary/scoring.")
+        logger.warning(
+            "GEMINI_API_KEY is not configured. Returning fallback summary/scoring."
+        )
         return (
             InterviewSummary(
                 strengths=["Chưa cấu hình GEMINI_API_KEY nên chưa thể sinh summary."],
@@ -106,7 +116,7 @@ Format your response as JSON with keys: strengths, concerns, recommendation, sum
         prompt=summary_prompt,
         temperature=0.5,
     )
-    
+
     try:
         summary_text = summary_text.strip()
         # Extract JSON from response
@@ -114,7 +124,7 @@ Format your response as JSON with keys: strengths, concerns, recommendation, sum
             summary_text = summary_text.split("```json")[1].split("```")[0].strip()
         elif "```" in summary_text:
             summary_text = summary_text.split("```")[1].split("```")[0].strip()
-        
+
         summary_data = json.loads(summary_text)
         summary = InterviewSummary(
             strengths=summary_data.get("strengths", []),
@@ -130,7 +140,7 @@ Format your response as JSON with keys: strengths, concerns, recommendation, sum
             recommendation="maybe",
             summary_text="",
         )
-    
+
     # Generate scoring
     scoring_prompt = f"""Based on the following interview data, score the candidate on a scale of 1-10 for each criterion:
 
@@ -154,7 +164,7 @@ All feedback should be in Vietnamese.
         prompt=scoring_prompt,
         temperature=0.1,
     )
-    
+
     try:
         scoring_text = scoring_text.strip()
         # Extract JSON from response
@@ -162,7 +172,7 @@ All feedback should be in Vietnamese.
             scoring_text = scoring_text.split("```json")[1].split("```")[0].strip()
         elif "```" in scoring_text:
             scoring_text = scoring_text.split("```")[1].split("```")[0].strip()
-        
+
         scoring_data = json.loads(scoring_text)
         scoring = CandidateScoring(
             communication_score=float(scoring_data.get("communication_score", 5)),
@@ -184,7 +194,7 @@ All feedback should be in Vietnamese.
             experience_fit_feedback="",
             salary_alignment_feedback="",
         )
-    
+
     return summary, scoring
 
 
@@ -216,19 +226,20 @@ async def _call_gemini_text(
     }
 
     timeout = aiohttp.ClientTimeout(total=40)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.post(url, json=payload) as resp:
-            body = await resp.text()
-            if resp.status != 200:
-                raise RuntimeError(f"Gemini API error {resp.status}: {body[:300]}")
+    async with aiohttp.ClientSession(timeout=timeout) as session, session.post(
+        url, json=payload
+    ) as resp:
+        body = await resp.text()
+        if resp.status != 200:
+            raise RuntimeError(f"Gemini API error {resp.status}: {body[:300]}")
 
-            data = json.loads(body)
-            candidates = data.get("candidates", [])
-            if not candidates:
-                raise RuntimeError("Gemini response missing candidates")
+        data = json.loads(body)
+        candidates = data.get("candidates", [])
+        if not candidates:
+            raise RuntimeError("Gemini response missing candidates")
 
-            parts = candidates[0].get("content", {}).get("parts", [])
-            text_chunks = [p.get("text", "") for p in parts if p.get("text")]
-            if not text_chunks:
-                raise RuntimeError("Gemini response missing text parts")
-            return _extract_json_text("\n".join(text_chunks))
+        parts = candidates[0].get("content", {}).get("parts", [])
+        text_chunks = [p.get("text", "") for p in parts if p.get("text")]
+        if not text_chunks:
+            raise RuntimeError("Gemini response missing text parts")
+        return _extract_json_text("\n".join(text_chunks))

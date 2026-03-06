@@ -42,14 +42,14 @@ settings = get_settings()
 class HRScreeningAgent(Agent):
     """
     HR Screening Agent that conducts structured phone interviews.
-    
+
     The agent guides candidates through 5 phases:
     1. Personal information collection
     2. Work experience review
     3. Fit assessment
     4. Additional information (availability)
     5. Closing and questions
-    
+
     After completing all tasks, the agent automatically disconnects.
     """
 
@@ -68,7 +68,7 @@ class HRScreeningAgent(Agent):
         """Execute the interview workflow and disconnect after completion."""
         workflow_start_time = time.time()
         task_timings = {}
-        
+
         tg = TaskGroup(chat_ctx=self.chat_ctx)
 
         tg.add(
@@ -116,12 +116,12 @@ class HRScreeningAgent(Agent):
                 "experience": r.get("experience"),
                 "fit": r.get("fit"),
                 "additional": r.get("additional"),
-                "closing": r.get("closing")
+                "closing": r.get("closing"),
             }
 
             logger.info(f"FINAL INTERVIEW RESULTS: {final_report}")
             logger.info(f"Interview duration: {total_duration:.2f} seconds")
-            
+
             # Create analytics data
             analytics = InterviewAnalytics(
                 total_duration_seconds=total_duration,
@@ -129,14 +129,16 @@ class HRScreeningAgent(Agent):
                 end_time=datetime.utcnow().isoformat(),
                 tasks_completed=list(r.keys()),
             )
-            
+
             # Store analytics in session
             userdata: SessionUserData = self.session.userdata
             userdata.interview_session.analytics = analytics
             userdata.storage.update_session(userdata.interview_session)
 
         except asyncio.TimeoutError:
-            logger.error(f"Interview workflow timed out after {settings.agent.timeout_seconds} seconds")
+            logger.error(
+                f"Interview workflow timed out after {settings.agent.timeout_seconds} seconds"
+            )
             await self.session.generate_reply(
                 instructions="Xin lỗi, phiên phỏng vấn đã hết thời gian. Chúng tôi sẽ liên hệ lại với bạn sau."
             )
@@ -174,7 +176,7 @@ server.setup_fnc = prewarm
 async def my_agent(ctx: JobContext):
     """
     Main entry point for agent sessions.
-    
+
     Sets up storage, creates agent session, and handles lifecycle.
     """
     ctx.log_context_fields = {
@@ -186,16 +188,13 @@ async def my_agent(ctx: JobContext):
         storage = InterviewDataStorage(storage_dir=settings.storage.data_dir)
         interview_session = storage.create_session(
             room_name=ctx.room.name,
-            participant_id=None  # Will be set when participant joins
+            participant_id=None,  # Will be set when participant joins
         )
 
         logger.info(f"Created interview session: {interview_session.session_id}")
 
         # Create userdata instance
-        userdata = SessionUserData(
-            storage=storage,
-            interview_session=interview_session
-        )
+        userdata = SessionUserData(storage=storage, interview_session=interview_session)
 
         session = AgentSession[SessionUserData](
             userdata=userdata,
@@ -205,7 +204,7 @@ async def my_agent(ctx: JobContext):
             tts=inference.TTS(
                 model=settings.tts.model,
                 voice=settings.tts.voice,
-                language=settings.tts.language
+                language=settings.tts.language,
             ),
             turn_detection=MultilingualModel(),
             vad=ctx.proc.userdata["vad"],

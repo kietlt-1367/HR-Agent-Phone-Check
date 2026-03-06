@@ -3,7 +3,7 @@ import logging
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -14,23 +14,23 @@ class InterviewSession:
     """Represents a complete HR interview session with metadata."""
 
     session_id: str = field(default_factory=lambda: str(uuid4()))
-    room_name: Optional[str] = None
-    participant_id: Optional[str] = None
+    room_name: str | None = None
+    participant_id: str | None = None
     started_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    completed_at: Optional[str] = None
+    completed_at: str | None = None
 
-    personal_info: Optional[Dict[str, Any]] = None
-    work_experience: Optional[Dict[str, Any]] = None
-    fit_assessment: Optional[Dict[str, Any]] = None
-    additional_info: Optional[Dict[str, Any]] = None
-    closing_notes: Optional[Dict[str, Any]] = None
-    
+    personal_info: dict[str, Any] | None = None
+    work_experience: dict[str, Any] | None = None
+    fit_assessment: dict[str, Any] | None = None
+    additional_info: dict[str, Any] | None = None
+    closing_notes: dict[str, Any] | None = None
+
     # New fields for analysis
-    interview_summary: Optional[Dict[str, Any]] = None
-    candidate_scoring: Optional[Dict[str, Any]] = None
-    analytics: Optional[Dict[str, Any]] = None
+    interview_summary: dict[str, Any] | None = None
+    candidate_scoring: dict[str, Any] | None = None
+    analytics: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, excluding None values."""
         return {k: v for k, v in asdict(self).items() if v is not None}
 
@@ -38,7 +38,7 @@ class InterviewSession:
 class InterviewDataStorage:
     """
     Thread-safe storage for interview session data.
-    
+
     Features:
     - JSON format (safe for special characters)
     - Session isolation (one file per session)
@@ -47,12 +47,12 @@ class InterviewDataStorage:
     - Atomic writes
     """
 
-    def __init__(self, storage_dir: Optional[str] = None):
+    def __init__(self, storage_dir: str | None = None):
         """
         Initialize storage.
-        
+
         Args:
-            storage_dir: Directory for storing session files. 
+            storage_dir: Directory for storing session files.
                         Defaults to ./interview_data/
         """
         if storage_dir is None:
@@ -61,18 +61,15 @@ class InterviewDataStorage:
         self.storage_dir = Path(storage_dir)
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-        logger.info(f"Interview data storage initialized at: {self.storage_dir.absolute()}")
+        logger.info(
+            f"Interview data storage initialized at: {self.storage_dir.absolute()}"
+        )
 
     def create_session(
-        self,
-        room_name: Optional[str] = None,
-        participant_id: Optional[str] = None
+        self, room_name: str | None = None, participant_id: str | None = None
     ) -> InterviewSession:
         """Create a new interview session with unique ID."""
-        session = InterviewSession(
-            room_name=room_name,
-            participant_id=participant_id
-        )
+        session = InterviewSession(room_name=room_name, participant_id=participant_id)
 
         # Save initial session file
         self._save_session(session)
@@ -94,16 +91,16 @@ class InterviewDataStorage:
     def _save_session(self, session: InterviewSession) -> None:
         """
         Save session data to JSON file atomically.
-        
+
         Uses atomic write pattern: write to temp file, then rename.
         This prevents corruption from concurrent access or crashes.
         """
         file_path = self._get_session_path(session.session_id)
-        temp_path = file_path.with_suffix('.tmp')
+        temp_path = file_path.with_suffix(".tmp")
 
         try:
             # Write to temp file first
-            with open(temp_path, 'w', encoding='utf-8') as f:
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(session.to_dict(), f, ensure_ascii=False, indent=2)
 
             # Atomic rename
@@ -116,7 +113,7 @@ class InterviewDataStorage:
                 temp_path.unlink()
             raise
 
-    def load_session(self, session_id: str) -> Optional[InterviewSession]:
+    def load_session(self, session_id: str) -> InterviewSession | None:
         """Load session from file."""
         file_path = self._get_session_path(session_id)
 
@@ -125,7 +122,7 @@ class InterviewDataStorage:
             return None
 
         try:
-            with open(file_path, encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             return InterviewSession(**data)
@@ -139,13 +136,11 @@ class InterviewDataStorage:
         return self.storage_dir / f"session_{session_id}.json"
 
     def list_sessions(
-        self,
-        completed_only: bool = False,
-        limit: Optional[int] = None
-    ) -> List[InterviewSession]:
+        self, completed_only: bool = False, limit: int | None = None
+    ) -> list[InterviewSession]:
         """
         List all sessions, sorted by creation time (newest first).
-        
+
         Args:
             completed_only: If True, only return completed sessions
             limit: Maximum number of sessions to return
@@ -155,10 +150,10 @@ class InterviewDataStorage:
         for file_path in sorted(
             self.storage_dir.glob("session_*.json"),
             key=lambda p: p.stat().st_mtime,
-            reverse=True
+            reverse=True,
         ):
             try:
-                with open(file_path, encoding='utf-8') as f:
+                with open(file_path, encoding="utf-8") as f:
                     data = json.load(f)
 
                 session = InterviewSession(**data)
@@ -176,7 +171,7 @@ class InterviewDataStorage:
 
         return sessions
 
-    def get_storage_stats(self) -> Dict[str, Any]:
+    def get_storage_stats(self) -> dict[str, Any]:
         """Get statistics about stored sessions."""
         all_files = list(self.storage_dir.glob("session_*.json"))
 
@@ -191,5 +186,5 @@ class InterviewDataStorage:
             "completed_sessions": completed,
             "in_progress_sessions": len(sessions) - completed,
             "total_size_bytes": total_size,
-            "total_size_mb": round(total_size / 1024 / 1024, 2)
+            "total_size_mb": round(total_size / 1024 / 1024, 2),
         }

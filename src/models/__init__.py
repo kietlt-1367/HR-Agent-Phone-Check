@@ -14,15 +14,15 @@ from .models import (
 )
 
 __all__ = [
+    "AdditionalInfo",
+    "CandidateScoring",
+    "ClosingNotes",
+    "FitAssessment",
+    "InterviewAnalytics",
     "InterviewDataStorage",
     "InterviewSession",
-    "SessionUserData",
-    "PersonalInfo",
-    "WorkExperience",
-    "FitAssessment",
-    "AdditionalInfo",
-    "ClosingNotes",
-    "CandidateScoring",
     "InterviewSummary",
-    "InterviewAnalytics",
+    "PersonalInfo",
+    "SessionUserData",
+    "WorkExperience",
 ]

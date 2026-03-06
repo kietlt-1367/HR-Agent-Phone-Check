@@ -1,8 +1,6 @@
-
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from dotenv import find_dotenv, load_dotenv
 from pydantic_settings import (
@@ -21,13 +19,13 @@ from .models import (
 )
 
 # Load .env file first (for secrets)
-load_dotenv(find_dotenv('.env.local'), override=True)
+load_dotenv(find_dotenv(".env.local"), override=True)
 
 
 class Settings(BaseSettings):
     """
     Application settings.
-    
+
     Priority order (highest to lowest):
     1. Init settings
     2. Environment variables
@@ -37,12 +35,12 @@ class Settings(BaseSettings):
     """
 
     # API Keys and Secrets (from .env)
-    livekit_url: Optional[str] = None
-    livekit_api_key: Optional[str] = None
-    livekit_api_secret: Optional[str] = None
-    openai_api_key: Optional[str] = None
-    gemini_api_key: Optional[str] = None
-    hr_webhook_url: Optional[str] = None
+    livekit_url: str | None = None
+    livekit_api_key: str | None = None
+    livekit_api_secret: str | None = None
+    openai_api_key: str | None = None
+    gemini_api_key: str | None = None
+    hr_webhook_url: str | None = None
 
     # Functional configuration (from settings.yaml)
     agent: AgentSettings = AgentSettings()
@@ -73,7 +71,7 @@ class Settings(BaseSettings):
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         """
         Customize settings sources priority.
-        
+
         Order: init > env > dotenv > file_secret > yaml
         """
         return (
@@ -92,9 +90,9 @@ def get_settings() -> Settings:
     to match project convention.
     """
     s = Settings()
-    
+
     # If HR_WEBHOOK_URL is set via env, override webhook.url
     if s.hr_webhook_url:
         s.webhook.url = s.hr_webhook_url
-    
+
     return s

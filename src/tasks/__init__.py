@@ -7,9 +7,9 @@ from .personal_info import PersonalInfoTask
 from .work_experience import WorkExperienceTask
 
 __all__ = [
-    "PersonalInfoTask",
-    "WorkExperienceTask",
-    "FitAssessmentTask",
     "AdditionalInfoTask",
     "ClosingTask",
+    "FitAssessmentTask",
+    "PersonalInfoTask",
+    "WorkExperienceTask",
 ]
