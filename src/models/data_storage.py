@@ -25,7 +25,9 @@ class InterviewSession:
     additional_info: dict[str, Any] | None = None
     closing_notes: dict[str, Any] | None = None
 
-    # New fields for analysis
+    # Canonical analysis fields
+    summary: dict[str, Any] | None = None
+    scoring: dict[str, Any] | None = None
     interview_summary: dict[str, Any] | None = None
     candidate_scoring: dict[str, Any] | None = None
     analytics: dict[str, Any] | None = None

@@ -66,6 +66,7 @@ class HRScreeningAgent(Agent):
 
     async def on_enter(self):
         """Execute the interview workflow and disconnect after completion."""
+        workflow_start_at = datetime.utcnow().isoformat()
         workflow_start_time = time.time()
         task_timings = {}
 
@@ -126,6 +127,7 @@ class HRScreeningAgent(Agent):
             analytics = InterviewAnalytics(
                 total_duration_seconds=total_duration,
                 task_durations=task_timings,
+                start_time=workflow_start_at,
                 end_time=datetime.utcnow().isoformat(),
                 tasks_completed=list(r.keys()),
             )

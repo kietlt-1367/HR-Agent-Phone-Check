@@ -149,9 +149,13 @@ class ClosingTask(AgentTask[ClosingNotes]):
                     closing_notes=closing_notes,
                 )
 
-                # Store in session
-                session.interview_summary = asdict(summary)
-                session.candidate_scoring = asdict(scoring)
+                # Store in session (canonical keys + backward-compatible keys)
+                summary_dict = asdict(summary)
+                scoring_dict = asdict(scoring)
+                session.summary = summary_dict
+                session.scoring = scoring_dict
+                session.interview_summary = summary_dict
+                session.candidate_scoring = scoring_dict
 
                 logger.info(
                     f"Summary generated - Recommendation: {summary.recommendation}"

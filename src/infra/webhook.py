@@ -147,8 +147,12 @@ def prepare_interview_payload(session_data: dict[str, Any]) -> dict[str, Any]:
     )
 
     # Analysis results
-    payload["summary"] = session_data.get("interview_summary", {})
-    payload["scoring"] = session_data.get("candidate_scoring", {})
+    payload["summary"] = session_data.get("summary") or session_data.get(
+        "interview_summary", {}
+    )
+    payload["scoring"] = session_data.get("scoring") or session_data.get(
+        "candidate_scoring", {}
+    )
     payload["analytics"] = session_data.get("analytics", {})
 
     return payload
