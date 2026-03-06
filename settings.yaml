@@ -1,0 +1,31 @@
+# HR Agent Configuration
+# Functional settings - NOT for secrets (use .env.local for API keys)
+
+# Agent behavior
+agent:
+  timeout_seconds: 1800  # 30 minutes
+  language: vi
+  preemptive_generation: true
+
+# Speech-to-Text
+stt:
+  model: elevenlabs/scribe_v2_realtime
+  language: vi
+
+# Large Language Model
+llm:
+  model: openai/gpt-4.1-mini
+  gemini_model: gemini-2.0-flash
+
+# Text-to-Speech
+tts:
+  model: cartesia/sonic-3
+  voice: 935a9060-373c-49e4-b078-f4ea6326987a
+  language: vi
+
+# Storage
+storage:
+  data_dir: ./interview_data
+
+# Deployment
+deployment_env: development

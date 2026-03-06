@@ -1,1 +1,4 @@
-# This file makes the src directory a Python package
+from __future__ import annotations
+
+from .agent import HRScreeningAgent
+__all__ = ["HRScreeningAgent"]

@@ -1,291 +1,59 @@
-import logging
-from dataclasses import dataclass
-from typing import List
+"""
+Main HR Screening Agent implementation.
 
-from dotenv import load_dotenv
+This agent conducts phone screening interviews in Vietnamese,
+collecting candidate information through a structured workflow.
+"""
+
+import asyncio
+import logging
+import time
+from datetime import datetime
+
 from livekit import rtc
 from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
-    AgentTask,
     JobContext,
     JobProcess,
     cli,
     inference,
     room_io,
-    function_tool,
 )
 from livekit.agents.beta.workflows import TaskGroup
 from livekit.plugins import noise_cancellation, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
+from models.data_storage import InterviewDataStorage
+from models.models import InterviewAnalytics, SessionUserData
+from settings import get_settings
+from tasks.additional_info import AdditionalInfoTask
+from tasks.closing import ClosingTask
+from tasks.fit_assessment import FitAssessmentTask
+from tasks.personal_info import PersonalInfoTask
+from tasks.work_experience import WorkExperienceTask
+
 logger = logging.getLogger("agent")
 
-load_dotenv(".env.local")
+settings = get_settings()
 
-# Data Models
-
-@dataclass
-class PersonalInfo:
-    full_name: str
-    applied_position: str
-
-@dataclass
-class WorkExperience:
-    company: str
-    title: str
-    duration: str
-
-@dataclass
-class FitAssessment:
-    relevant_skills: str
-    reason_for_leaving: str
-    expected_salary: str
-
-@dataclass
-class AdditionalInfo:
-    availability: str
-    start_date: str
-
-@dataclass
-class ClosingNotes:
-    candidate_questions: List[str]
-
-
-# Workflow Tasks 
-
-class PersonalInfoTask(AgentTask[PersonalInfo]):
-    def __init__(self):
-        super().__init__(
-            instructions="""
-            Bạn là trợ lý HR thân thiện.
-            Mục tiêu: Chào ứng viên và xác nhận thông tin cá nhân bắt buộc.
-
-            Quy tắc:
-            - Hãy giới thiệu bản thân bạn là trợ lý ảo của công ty, sau đó hỏi họ tên và vị trí ứng tuyển.
-            - Bắt buộc: Họ tên, vị trí ứng tuyển.
-            - Nếu thiếu thông tin, phải hỏi bổ sung cho đủ trước khi chuyển bước.
-            - Không tóm tắt hoặc đọc lại dữ liệu cá nhân đã thu thập.
-            - Không hỏi "cần hỗ trợ gì thêm" ở bước này.
-            - QUAN TRỌNG: Không cảm ơn, không kết thúc cuộc gọi, không nói "sẽ liên hệ lại".
-            - Chỉ xác nhận thông tin ngắn gọn khi xong bước này, chờ hệ thống chuyển bước tiếp.
-            - Giọng điệu chuyên nghiệp, ấm áp, rõ ràng.
-            """
-        )
-
-    async def on_enter(self):
-        await self.session.generate_reply(
-            instructions=(
-                "Chào ứng viên lịch sự, sau đó hỏi họ tên và vị trí ứng tuyển."
-            )
-        )
-    
-    @function_tool
-    async def record_personal_info(self, full_name: str, applied_position: str):
-        """Ghi nhận thông tin cá nhân của ứng viên"""
-        if not full_name.strip() or not applied_position.strip():
-            await self.session.generate_reply(
-                instructions="Xin lỗi, bạn vui lòng cung cấp đầy đủ họ tên và vị trí ứng tuyển."
-            )
-            return
-        
-        logger.info("Collected personal info: full_name=%s, applied_position=%s", full_name, applied_position)
-        with open("collected_info.txt", "a", encoding="utf-8") as f:
-            f.write(f"PersonalInfo: {{'full_name': '{full_name}', 'applied_position': '{applied_position}'}}\n")
-        
-        self.complete(
-            PersonalInfo(
-                full_name=full_name,
-                applied_position=applied_position,
-            )
-        )
-
-
-class WorkExperienceTask(AgentTask[WorkExperience]):
-    def __init__(self):
-        super().__init__(
-            instructions="""
-            Mục tiêu: Xác nhận kinh nghiệm làm việc gần nhất.
-
-            Quy tắc:
-            - Lắng nghe và xác nhận ngắn gọn trước khi hỏi tiếp.
-            - Thu thập: Công ty, vị trí, thời gian làm việc.
-            - Hỏi thêm: kỹ năng nổi bật, công nghệ sử dụng, thành tựu đạt được.
-            - Không tóm tắt lại dữ liệu cá nhân của ứng viên.
-            - QUAN TRỌNG: Không cảm ơn, không kết thúc, không nói "sẽ liên hệ lại".
-            - Chỉ xác nhận thông tin ngắn gọn khi xong, chờ hệ thống chuyển bước tiếp.
-            """
-        )
-
-    async def on_enter(self):
-        await self.session.generate_reply(
-            instructions=(
-                "Tiếp theo, cho mình hỏi công việc hiện tại hoặc gần nhất: công ty, vị trí, thời gian làm việc."
-            )
-        )
-
-    @function_tool
-    async def record_recent_job(self, company: str, title: str, duration: str):
-        """Ghi nhận thông tin kinh nghiệm làm việc gần nhất"""
-        if not company.strip() or not title.strip() or not duration.strip():
-            await self.session.generate_reply(
-                instructions="Xin lỗi, bạn vui lòng cung cấp đầy đủ thông tin công ty, vị trí và thời gian làm việc."
-            )
-            return
-        
-        logger.info("Collected work experience: company=%s, title=%s, duration=%s", company, title, duration)
-        with open("collected_info.txt", "a", encoding="utf-8") as f:
-            f.write(f"WorkExperience: {{'company': '{company}', 'title': '{title}', 'duration': '{duration}'}}\n")
-        
-        self.complete(
-            WorkExperience(
-                company=company,
-                title=title,
-                duration=duration,
-            )
-        )
-
-
-class FitAssessmentTask(AgentTask[FitAssessment]):
-    def __init__(self):
-        super().__init__(
-            instructions="""
-            Mục tiêu: Đánh giá mức độ phù hợp với vị trí ứng tuyển.
-
-            Quy tắc:
-            - Hỏi các câu liên quan kỹ năng, kinh nghiệm phù hợp.
-            - Hỏi lý do nghỉ việc.
-            - Hỏi mong muốn công việc mới và mức lương kỳ vọng.
-            - Đảm bảo thu thập đầy đủ thông tin trước khi chuyển bước.
-            - Không tóm tắt dữ liệu ứng viên trong cuộc hội thoại.
-            - QUAN TRỌNG: Không cảm ơn, không kết thúc, không nói "sẽ liên hệ lại".
-            - Chỉ xác nhận ngắn gọn khi xong, chờ hệ thống chuyển bước tiếp.
-            """
-        )
-
-    async def on_enter(self):
-        await self.session.generate_reply(
-            instructions=(
-                "Tiếp theo, cho mình hỏi về kỹ năng và kinh nghiệm của bạn liên quan đến vị trí này, cùng lý do bạn rời khỏi công việc gần nhất."
-            )
-        )
-
-    @function_tool
-    async def record_fit_assessment(
-        self,
-        relevant_skills: str,
-        reason_for_leaving: str,
-        expected_salary: str,
-    ):
-        """Ghi nhận đánh giá mức độ phù hợp của ứng viên"""
-        if not relevant_skills.strip() or not reason_for_leaving.strip() or not expected_salary.strip():
-            await self.session.generate_reply(
-                instructions="Xin lỗi, bạn vui lòng cung cấp đầy đủ thông tin về kỹ năng, lý do rời khỏi công việc, và mức lương kỳ vọng."
-            )
-            return
-        
-        logger.info("Collected fit assessment: relevant_skills=%s, reason_for_leaving=%s, expected_salary=%s", relevant_skills, reason_for_leaving, expected_salary)
-        with open("collected_info.txt", "a", encoding="utf-8") as f:
-            f.write(f"FitAssessment: {{'relevant_skills': '{relevant_skills}', 'reason_for_leaving': '{reason_for_leaving}', 'expected_salary': '{expected_salary}'}}\n")
-        
-        self.complete(
-            FitAssessment(
-                relevant_skills=relevant_skills,
-                reason_for_leaving=reason_for_leaving,
-                expected_salary=expected_salary,
-            )
-        )
-
-
-class AdditionalInfoTask(AgentTask[AdditionalInfo]):
-    def __init__(self):
-        super().__init__(
-            instructions="""
-            Mục tiêu: Kiểm tra thông tin bổ sung và xác thực.
-
-            Quy tắc:
-            - Hỏi khả năng nhận việc và thời gian có thể đi làm.
-            - Không đọc lại dữ liệu cá nhân đã thu thập.
-            - QUAN TRỌNG: Không cảm ơn, không kết thúc, không nói "sẽ liên hệ lại".
-            - Chỉ xác nhận ngắn gọn khi xong, chờ hệ thống chuyển bước tiếp.
-            """
-        )
-
-    async def on_enter(self):
-        await self.session.generate_reply(
-            instructions=(
-                "Tiếp theo, cho mình hỏi về khả năng nhận việc và thời gian bạn có thể bắt đầu đi làm."
-            )
-        )
-
-    @function_tool
-    async def record_availability(self, availability: str, start_date: str):
-        """Ghi nhận thông tin tính khả dụng của ứng viên"""
-        if not availability.strip() or not start_date.strip():
-            await self.session.generate_reply(
-                instructions="Xin lỗi, bạn vui lòng cung cấp đầy đủ thông tin về khả năng nhận việc và thời gian đi làm."
-            )
-            return
-        
-        logger.info("Collected additional info: availability=%s, start_date=%s", availability, start_date)
-        with open("collected_info.txt", "a", encoding="utf-8") as f:
-            f.write(f"AdditionalInfo: {{'availability': '{availability}', 'start_date': '{start_date}'}}\n")
-        
-        self.complete(
-            AdditionalInfo(
-                availability=availability,
-                start_date=start_date,
-            )
-        )
-
-
-class ClosingTask(AgentTask[ClosingNotes]):
-    def __init__(self):
-        super().__init__(
-            instructions="""
-            Mục tiêu: Chốt lại buổi phonecheck.
-
-            Quy tắc:
-            1. Hỏi ứng viên có câu hỏi nào không.
-            2. Cấm trả lời câu hỏi của ứng viên, chỉ ghi nhận.
-            3. Hỏi lặp lại "Còn câu hỏi nào khác nữa không?" cho đến khi ứng viên không có câu hỏi gì thêm.
-            4. Khi ứng viên không còn câu hỏi, gọi record_closing_notes() với danh sách tất cả câu hỏi.
-            5. Sau đó cảm ơn ứng viên vì đã tham gia buổi phỏng vấn, thông báo kết quả sẽ được gửi sau.
-            - Không liệt kê lại thông tin cá nhân đã thu thập.
-            """
-        )
-
-    async def on_enter(self):
-        await self.session.generate_reply(
-            instructions=(
-                "Xác nhận rằng bạn đã có đủ thông tin cần thiết. Hỏi ứng viên có câu hỏi nào thêm không."
-            )
-        )
-
-    @function_tool
-    async def record_closing_notes(self, candidate_questions: List[str]) -> None:
-        """Ghi nhận các câu hỏi của ứng viên và hoàn thành buổi phỏng vấn."""
-
-        await self.session.generate_reply(
-            instructions="Cảm ơn bạn vì đã tham gia buổi phỏng vấn này. Kết quả sẽ được gửi cho bạn sau."
-        )
-        
-        logger.info("Completing ClosingTask with candidate_questions: %s", candidate_questions)
-        with open("collected_info.txt", "a", encoding="utf-8") as f:
-            f.write(f"ClosingNotes: {{'candidate_questions': {candidate_questions}}}\n")
-        
-        self.complete(
-            ClosingNotes(
-                candidate_questions=candidate_questions,
-            )
-        )
-
-
-# Main Agent Implementation
 
 class HRScreeningAgent(Agent):
-    def __init__(self) -> None:
+    """
+    HR Screening Agent that conducts structured phone interviews.
+    
+    The agent guides candidates through 5 phases:
+    1. Personal information collection
+    2. Work experience review
+    3. Fit assessment
+    4. Additional information (availability)
+    5. Closing and questions
+    
+    After completing all tasks, the agent automatically disconnects.
+    """
+
+    def __init__(self, job_ctx: JobContext) -> None:
         super().__init__(
             instructions="""Bạn là trợ lý tuyển dụng nhân sự của công ty công nghệ cho buổi phone screen.
             Bạn giao tiếp với ứng viên để thu thập thêm thông tin cho công ty.
@@ -294,8 +62,13 @@ class HRScreeningAgent(Agent):
             Luôn đợi ứng viên nói xong trước khi hỏi tiếp.
             Tuyệt đối không tóm tắt hoặc đọc lại dữ liệu cá nhân trong hội thoại; chỉ ghi nhận nội bộ.""",
         )
+        self._job_ctx = job_ctx
 
     async def on_enter(self):
+        """Execute the interview workflow and disconnect after completion."""
+        workflow_start_time = time.time()
+        task_timings = {}
+        
         tg = TaskGroup(chat_ctx=self.chat_ctx)
 
         tg.add(
@@ -324,29 +97,73 @@ class HRScreeningAgent(Agent):
             description="Chốt buổi phonecheck, cảm ơn ứng viên sau khi kết thúc",
         )
 
-        # Execute the workflow
+        # Execute the workflow with timeout
         logger.info("Starting HR Screening Workflow...")
-        results = await tg
-        r = results.task_results
 
-        # Access results directly by ID
-        final_report = {
-            "personal": r.get("personal"),
-            "experience": r.get("experience"),
-            "fit": r.get("fit"),
-            "additional": r.get("additional"),
-            "closing": r.get("closing")
-        }
+        try:
+            # Run workflow with timeout protection
+            results = await asyncio.wait_for(tg, timeout=settings.agent.timeout_seconds)
+            r = results.task_results
 
-        logger.info(f"FINAL INTERVIEW RESULTS: {final_report}")
+            # Calculate task timings from task_timings dict if available
+            # For now, we'll calculate from results execution
+            workflow_end_time = time.time()
+            total_duration = workflow_end_time - workflow_start_time
+
+            # Log final results
+            final_report = {
+                "personal": r.get("personal"),
+                "experience": r.get("experience"),
+                "fit": r.get("fit"),
+                "additional": r.get("additional"),
+                "closing": r.get("closing")
+            }
+
+            logger.info(f"FINAL INTERVIEW RESULTS: {final_report}")
+            logger.info(f"Interview duration: {total_duration:.2f} seconds")
+            
+            # Create analytics data
+            analytics = InterviewAnalytics(
+                total_duration_seconds=total_duration,
+                task_durations=task_timings,
+                end_time=datetime.utcnow().isoformat(),
+                tasks_completed=list(r.keys()),
+            )
+            
+            # Store analytics in session
+            userdata: SessionUserData = self.session.userdata
+            userdata.interview_session.analytics = analytics
+            userdata.storage.update_session(userdata.interview_session)
+
+        except asyncio.TimeoutError:
+            logger.error(f"Interview workflow timed out after {settings.agent.timeout_seconds} seconds")
+            await self.session.generate_reply(
+                instructions="Xin lỗi, phiên phỏng vấn đã hết thời gian. Chúng tôi sẽ liên hệ lại với bạn sau."
+            )
+
+        except Exception as e:
+            logger.error(f"Error during interview workflow: {e}", exc_info=True)
+            await self.session.generate_reply(
+                instructions="Xin lỗi, có lỗi xảy ra. Chúng tôi sẽ liên hệ lại với bạn sau."
+            )
+
+        finally:
+            # Auto-disconnect after completing all tasks (or on error/timeout)
+            logger.info("Interview session ending. Disconnecting agent...")
+            self._job_ctx.shutdown()
 
 
 # Server Setup
 
-server = AgentServer()
+server = AgentServer(
+    ws_url=settings.livekit_url,
+    api_key=settings.livekit_api_key,
+    api_secret=settings.livekit_api_secret,
+)
 
 
 def prewarm(proc: JobProcess):
+    """Prewarm VAD model for faster startup."""
     proc.userdata["vad"] = silero.VAD.load()
 
 
@@ -355,27 +172,48 @@ server.setup_fnc = prewarm
 
 @server.rtc_session()
 async def my_agent(ctx: JobContext):
+    """
+    Main entry point for agent sessions.
+    
+    Sets up storage, creates agent session, and handles lifecycle.
+    """
     ctx.log_context_fields = {
         "room": ctx.room.name,
     }
 
-    try: 
-        session = AgentSession(
+    try:
+        # Initialize data storage
+        storage = InterviewDataStorage(storage_dir=settings.storage.data_dir)
+        interview_session = storage.create_session(
+            room_name=ctx.room.name,
+            participant_id=None  # Will be set when participant joins
+        )
+
+        logger.info(f"Created interview session: {interview_session.session_id}")
+
+        # Create userdata instance
+        userdata = SessionUserData(
+            storage=storage,
+            interview_session=interview_session
+        )
+
+        session = AgentSession[SessionUserData](
+            userdata=userdata,
             # Set language to Vietnamese for the HR screening flow
-            stt=inference.STT(model="elevenlabs/scribe_v2_realtime", language="vi"), 
-            llm=inference.LLM(model="openai/gpt-4.1-mini"),
+            stt=inference.STT(model=settings.stt.model, language=settings.stt.language),
+            llm=inference.LLM(model=settings.llm.model),
             tts=inference.TTS(
-                model="cartesia/sonic-3", 
-                voice="935a9060-373c-49e4-b078-f4ea6326987a",
-                language="vi"
+                model=settings.tts.model,
+                voice=settings.tts.voice,
+                language=settings.tts.language
             ),
             turn_detection=MultilingualModel(),
             vad=ctx.proc.userdata["vad"],
-            preemptive_generation=True,
+            preemptive_generation=settings.agent.preemptive_generation,
         )
 
         await session.start(
-            agent=HRScreeningAgent(),
+            agent=HRScreeningAgent(ctx),
             room=ctx.room,
             room_options=room_io.RoomOptions(
                 audio_input=room_io.AudioInputOptions(
@@ -390,8 +228,11 @@ async def my_agent(ctx: JobContext):
         )
 
         await ctx.connect()
+
+        logger.info(f"Session ended for interview: {interview_session.session_id}")
+
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error in agent session: {e}", exc_info=True)
         ctx.shutdown()
 
 
