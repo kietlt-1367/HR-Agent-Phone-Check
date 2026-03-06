@@ -16,6 +16,7 @@ from .models import (
     STTSettings,
     TTSSettings,
     WebhookSettings,
+    WorkflowSettings,
 )
 
 # Load .env file first (for secrets)
@@ -49,6 +50,7 @@ class Settings(BaseSettings):
     tts: TTSSettings = TTSSettings()
     storage: StorageSettings = StorageSettings()
     webhook: WebhookSettings = WebhookSettings()
+    workflow: WorkflowSettings = WorkflowSettings()
 
     # Deployment settings
     deployment_env: str = "development"
@@ -89,10 +91,4 @@ def get_settings() -> Settings:
     Keep initialization explicit at application entrypoints (e.g. agent.py)
     to match project convention.
     """
-    s = Settings()
-
-    # If HR_WEBHOOK_URL is set via env, override webhook.url
-    if s.hr_webhook_url:
-        s.webhook.url = s.hr_webhook_url
-
-    return s
+    return Settings()

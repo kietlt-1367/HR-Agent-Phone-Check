@@ -47,6 +47,41 @@ gemini mcp add --transport http livekit-docs https://docs.livekit.io/mcp
 
 The project includes a complete [AGENTS.md](AGENTS.md) file for these assistants. You can modify this file  your needs. To learn more about this file, see [https://agents.md](https://agents.md).
 
+## Dynamic Workflow Configuration
+
+This project features a **YAML-based workflow system** that allows non-developers to customize the interview flow without writing code. 
+
+### Key Features
+
+- **No-Code Customization**: Modify interview questions, tasks, and data fields via YAML
+- **Flexible Task Definition**: Add, remove, or reorder interview tasks
+- **Field Validation**: Configure validation rules (min/max length, required fields, etc.)
+- **Multi-Language Support**: Customize instructions in any language (currently Vietnamese)
+- **Production Ready**: Auto-generate summaries, candidate scoring, and webhook integration
+
+### Quick Start
+
+1. **Edit the workflow**: Modify `workflow_schema.yaml` to customize tasks and questions
+2. **No code changes needed**: The agent automatically loads the YAML configuration
+3. **Test your changes**: Run `uv run pytest tests/test_agent.py`
+
+### Example: Adding a New Task
+
+```yaml
+  - id: "technical_skills"
+    name: "Technical Skills Assessment"
+    instructions: |
+      Hỏi về kỹ năng lập trình và công nghệ của ứng viên
+    fields:
+      - name: "primary_language"
+        type: "string"
+        required: true
+        validation:
+          min_length: 2
+```
+
+See [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md) for complete documentation.
+
 ## Dev Setup
 
 Clone the repository and install dependencies to a virtual environment:

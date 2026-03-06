@@ -19,17 +19,15 @@ class InterviewSession:
     started_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     completed_at: str | None = None
 
-    personal_info: dict[str, Any] | None = None
-    work_experience: dict[str, Any] | None = None
-    fit_assessment: dict[str, Any] | None = None
-    additional_info: dict[str, Any] | None = None
-    closing_notes: dict[str, Any] | None = None
+    workflow_name: str | None = None
+    workflow_description: str | None = None
+    task_data: dict[str, dict[str, Any]] = field(default_factory=dict)
+    task_metadata: dict[str, dict[str, Any]] = field(default_factory=dict)
+    task_order: list[str] = field(default_factory=list)
 
     # Canonical analysis fields
     summary: dict[str, Any] | None = None
     scoring: dict[str, Any] | None = None
-    interview_summary: dict[str, Any] | None = None
-    candidate_scoring: dict[str, Any] | None = None
     analytics: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -127,7 +125,10 @@ class InterviewDataStorage:
             with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
-            return InterviewSession(**data)
+            valid_fields = set(InterviewSession.__dataclass_fields__.keys())
+            normalized_data = {k: v for k, v in data.items() if k in valid_fields}
+
+            return InterviewSession(**normalized_data)
 
         except Exception as e:
             logger.error(f"Failed to load session {session_id}: {e}")

@@ -28,15 +28,12 @@ from livekit.plugins.turn_detector.multilingual import MultilingualModel
 from models.data_storage import InterviewDataStorage
 from models.models import InterviewAnalytics, SessionUserData
 from settings import get_settings
-from tasks.additional_info import AdditionalInfoTask
-from tasks.closing import ClosingTask
-from tasks.fit_assessment import FitAssessmentTask
-from tasks.personal_info import PersonalInfoTask
-from tasks.work_experience import WorkExperienceTask
+from workflow import create_task_from_config, load_workflow_from_yaml
 
 logger = logging.getLogger("agent")
 
 settings = get_settings()
+workflow_schema = load_workflow_from_yaml(settings.workflow.workflow_path)
 
 
 class HRScreeningAgent(Agent):
@@ -70,55 +67,41 @@ class HRScreeningAgent(Agent):
         workflow_start_time = time.time()
         task_timings = {}
 
+        userdata: SessionUserData = self.session.userdata
+        userdata.interview_session.workflow_name = workflow_schema.workflow.name
+        userdata.interview_session.workflow_description = (
+            workflow_schema.workflow.description
+        )
+        userdata.storage.update_session(userdata.interview_session)
+
         tg = TaskGroup(chat_ctx=self.chat_ctx)
 
-        tg.add(
-            lambda: PersonalInfoTask(),
-            id="personal",
-            description="Chào mừng và xác nhận thông tin cá nhân",
-        )
-        tg.add(
-            lambda: WorkExperienceTask(),
-            id="experience",
-            description="Xác nhận kinh nghiệm làm việc",
-        )
-        tg.add(
-            lambda: FitAssessmentTask(),
-            id="fit",
-            description="Đánh giá mức độ phù hợp",
-        )
-        tg.add(
-            lambda: AdditionalInfoTask(),
-            id="additional",
-            description="Kiểm tra thông tin bổ sung & xác thực",
-        )
-        tg.add(
-            lambda: ClosingTask(),
-            id="closing",
-            description="Chốt buổi phonecheck, cảm ơn ứng viên sau khi kết thúc",
-        )
+        # Dynamically add tasks from workflow configuration
+        for task_config in workflow_schema.tasks:
+            tg.add(
+                lambda tc=task_config: create_task_from_config(tc),
+                id=task_config.id,
+                description=task_config.description,
+            )
 
         # Execute the workflow with timeout
         logger.info("Starting HR Screening Workflow...")
 
         try:
-            # Run workflow with timeout protection
-            results = await asyncio.wait_for(tg, timeout=settings.agent.timeout_seconds)
+            # Run workflow with timeout (from YAML or settings)
+            timeout = (
+                workflow_schema.workflow.timeout_seconds
+                or settings.agent.timeout_seconds
+            )
+            results = await asyncio.wait_for(tg, timeout=timeout)
             r = results.task_results
 
-            # Calculate task timings from task_timings dict if available
-            # For now, we'll calculate from results execution
+            # Calculate timing
             workflow_end_time = time.time()
             total_duration = workflow_end_time - workflow_start_time
 
             # Log final results
-            final_report = {
-                "personal": r.get("personal"),
-                "experience": r.get("experience"),
-                "fit": r.get("fit"),
-                "additional": r.get("additional"),
-                "closing": r.get("closing"),
-            }
+            final_report = {task_id: r.get(task_id) for task_id in r}
 
             logger.info(f"FINAL INTERVIEW RESULTS: {final_report}")
             logger.info(f"Interview duration: {total_duration:.2f} seconds")
@@ -133,7 +116,6 @@ class HRScreeningAgent(Agent):
             )
 
             # Store analytics in session
-            userdata: SessionUserData = self.session.userdata
             userdata.interview_session.analytics = analytics
             userdata.storage.update_session(userdata.interview_session)
 

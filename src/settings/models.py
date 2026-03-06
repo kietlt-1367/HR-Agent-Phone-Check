@@ -65,11 +65,6 @@ class StorageSettings(BaseModel):
 class WebhookSettings(BaseModel):
     """Webhook configuration for sending interview results."""
 
-    url: str = Field(
-        default="",
-        description="Webhook URL to POST interview results (optional, can be set via HR_WEBHOOK_URL env var)",
-    )
-
     timeout_seconds: int = Field(default=30, description="Timeout for webhook requests")
 
     retry_count: int = Field(
@@ -78,4 +73,13 @@ class WebhookSettings(BaseModel):
 
     retry_delay_seconds: float = Field(
         default=1.0, description="Delay between webhook retries in seconds"
+    )
+
+
+class WorkflowSettings(BaseModel):
+    """Workflow configuration."""
+
+    workflow_path: str = Field(
+        default="workflow_schema.yaml",
+        description="Path to workflow YAML configuration file (relative to project root or absolute path)",
     )

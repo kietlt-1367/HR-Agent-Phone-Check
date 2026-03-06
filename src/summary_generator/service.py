@@ -5,13 +5,8 @@ from typing import Any
 import aiohttp
 
 from models.models import (
-    AdditionalInfo,
     CandidateScoring,
-    ClosingNotes,
-    FitAssessment,
     InterviewSummary,
-    PersonalInfo,
-    WorkExperience,
 )
 
 logger = logging.getLogger(__name__)
@@ -20,11 +15,11 @@ logger = logging.getLogger(__name__)
 async def generate_summary_and_scoring(
     gemini_api_key: str,
     gemini_model: str,
-    personal_info: PersonalInfo | None,
-    work_experience: WorkExperience | None,
-    fit_assessment: FitAssessment | None,
-    additional_info: AdditionalInfo | None,
-    closing_notes: ClosingNotes | None,
+    workflow_name: str | None = None,
+    workflow_description: str | None = None,
+    task_data: dict[str, dict[str, Any]] | None = None,
+    task_metadata: dict[str, dict[str, Any]] | None = None,
+    task_order: list[str] | None = None,
 ) -> tuple[InterviewSummary, CandidateScoring]:
     """
     Generate interview summary and candidate scoring using LLM.
@@ -32,45 +27,37 @@ async def generate_summary_and_scoring(
     Args:
         gemini_api_key: Gemini API key
         gemini_model: Gemini model id (e.g. gemini-2.0-flash)
-        personal_info: Candidate personal information
-        work_experience: Candidate work experience
-        fit_assessment: Fit assessment results
-        additional_info: Additional candidate info
-        closing_notes: Candidate questions and closing remarks
+        workflow_name: Workflow name from YAML config
+        workflow_description: Workflow description from YAML config
+        task_data: Dynamic task data captured by task_id
+        task_metadata: Dynamic task metadata captured from YAML
+        task_order: Ordered list of task IDs
 
     Returns:
         Tuple of (InterviewSummary, CandidateScoring)
     """
 
-    # Prepare interview data for LLM analysis
+    safe_task_data = task_data or {}
+    ordered_task_ids = task_order or list(safe_task_data.keys())
     interview_data = {
-        "personal": {
-            "full_name": personal_info.full_name if personal_info else "Unknown",
-            "applied_position": personal_info.applied_position
-            if personal_info
-            else "Unknown",
+        "workflow": {
+            "name": workflow_name or "Unnamed workflow",
+            "description": workflow_description or "",
         },
-        "experience": {
-            "company": work_experience.company if work_experience else None,
-            "title": work_experience.title if work_experience else None,
-            "duration": work_experience.duration if work_experience else None,
-        },
-        "fit_assessment": {
-            "skills": fit_assessment.relevant_skills if fit_assessment else None,
-            "reason_for_leaving": fit_assessment.reason_for_leaving
-            if fit_assessment
-            else None,
-            "expected_salary": fit_assessment.expected_salary
-            if fit_assessment
-            else None,
-        },
-        "availability": {
-            "available": additional_info.availability if additional_info else None,
-            "start_date": additional_info.start_date if additional_info else None,
-        },
-        "candidate_questions": closing_notes.candidate_questions
-        if closing_notes
-        else [],
+        "tasks": [
+            {
+                "task_id": task_id,
+                "task_name": (task_metadata or {}).get(task_id, {}).get("name", task_id),
+                "task_description": (task_metadata or {}).get(task_id, {}).get(
+                    "description", ""
+                ),
+                "tool_name": (task_metadata or {}).get(task_id, {}).get(
+                    "tool_name", ""
+                ),
+                "collected_data": safe_task_data.get(task_id, {}),
+            }
+            for task_id in ordered_task_ids
+        ],
     }
 
     if not gemini_api_key:
@@ -96,7 +83,7 @@ async def generate_summary_and_scoring(
         )
 
     # Generate summary
-    summary_prompt = f"""Based on the following interview data, generate a professional summary evaluation:
+    summary_prompt = f"""Based on the following dynamic workflow interview data, generate a professional summary evaluation:
 
 Interview Data:
 {json.dumps(interview_data, indent=2, ensure_ascii=False)}
@@ -106,6 +93,11 @@ Please provide:
 2. List of 2-4 concerns or red flags (in Vietnamese)
 3. Recommendation: "proceed" (strong fit), "maybe" (acceptable but with concerns), or "pass" (not recommended)
 4. A concise free-form summary (2-3 sentences in Vietnamese)
+
+IMPORTANT:
+- Use task names, task descriptions, and collected fields exactly as provided.
+- Do not assume fixed task schema.
+- The workflow is custom and fully dynamic from YAML.
 
 Format your response as JSON with keys: strengths, concerns, recommendation, summary_text
 """
@@ -142,15 +134,15 @@ Format your response as JSON with keys: strengths, concerns, recommendation, sum
         )
 
     # Generate scoring
-    scoring_prompt = f"""Based on the following interview data, score the candidate on a scale of 1-10 for each criterion:
+    scoring_prompt = f"""Based on the following dynamic workflow interview data, score the candidate on a scale of 1-10 for each criterion:
 
 Interview Data:
 {json.dumps(interview_data, indent=2, ensure_ascii=False)}
 
 Score and provide feedback for:
-1. Communication (clarity, professionalism, engagement): 1-10
-2. Experience Fit (relevant skills, industry experience, growth trajectory): 1-10
-3. Salary Alignment (salary expectations vs market rate for position): 1-10
+1. Communication Quality (clarity, coherence, professionalism from captured conversation evidence): 1-10
+2. Information Completeness (how complete and consistent collected answers are across tasks): 1-10
+3. Requirement Alignment (fit with role constraints discovered in collected fields such as salary/availability/skills): 1-10
 
 Calculate overall_score as the average of the three scores.
 
@@ -226,9 +218,10 @@ async def _call_gemini_text(
     }
 
     timeout = aiohttp.ClientTimeout(total=40)
-    async with aiohttp.ClientSession(timeout=timeout) as session, session.post(
-        url, json=payload
-    ) as resp:
+    async with (
+        aiohttp.ClientSession(timeout=timeout) as session,
+        session.post(url, json=payload) as resp,
+    ):
         body = await resp.text()
         if resp.status != 200:
             raise RuntimeError(f"Gemini API error {resp.status}: {body[:300]}")

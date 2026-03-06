@@ -65,17 +65,18 @@ async def send_interview_webhook(
             )
 
             timeout = aiohttp.ClientTimeout(total=timeout_seconds)
-            async with aiohttp.ClientSession(timeout=timeout) as session, session.post(
-                webhook_url,
-                json=payload,
-                headers=headers,
-            ) as response:
+            async with (
+                aiohttp.ClientSession(timeout=timeout) as session,
+                session.post(
+                    webhook_url,
+                    json=payload,
+                    headers=headers,
+                ) as response,
+            ):
                 response_text = await response.text()
 
                 if response.status in (200, 201, 202, 204):
-                    logger.info(
-                        f"Webhook sent successfully (status {response.status})"
-                    )
+                    logger.info(f"Webhook sent successfully (status {response.status})")
                     return WebhookResult(
                         success=True,
                         status_code=response.status,
@@ -131,28 +132,21 @@ def prepare_interview_payload(session_data: dict[str, Any]) -> dict[str, Any]:
     payload["started_at"] = session_data.get("started_at", "")
     payload["completed_at"] = session_data.get("completed_at", "")
 
-    # Interview data
-    payload["candidate"] = {
-        "full_name": session_data.get("personal_info", {}).get("full_name", ""),
-        "applied_position": session_data.get("personal_info", {}).get(
-            "applied_position", ""
-        ),
+    # Workflow metadata and dynamic task data
+    payload["workflow"] = {
+        "name": session_data.get("workflow_name", ""),
+        "description": session_data.get("workflow_description", ""),
+        "task_order": session_data.get("task_order", []),
     }
 
-    payload["experience"] = session_data.get("work_experience", {})
-    payload["fit_assessment"] = session_data.get("fit_assessment", {})
-    payload["availability"] = session_data.get("additional_info", {})
-    payload["questions"] = session_data.get("closing_notes", {}).get(
-        "candidate_questions", []
-    )
+    payload["tasks"] = {
+        "data": session_data.get("task_data", {}),
+        "metadata": session_data.get("task_metadata", {}),
+    }
 
     # Analysis results
-    payload["summary"] = session_data.get("summary") or session_data.get(
-        "interview_summary", {}
-    )
-    payload["scoring"] = session_data.get("scoring") or session_data.get(
-        "candidate_scoring", {}
-    )
+    payload["summary"] = session_data.get("summary", {})
+    payload["scoring"] = session_data.get("scoring", {})
     payload["analytics"] = session_data.get("analytics", {})
 
     return payload

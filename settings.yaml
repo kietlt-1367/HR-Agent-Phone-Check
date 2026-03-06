@@ -27,5 +27,9 @@ tts:
 storage:
   data_dir: ./interview_data
 
+# Workflow
+workflow:
+  workflow_path: workflow_schema.yaml
+
 # Deployment
 deployment_env: development

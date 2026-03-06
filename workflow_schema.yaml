@@ -1,0 +1,198 @@
+# HR Screening Workflow Configuration
+# This file defines the interview tasks, questions, and data collection fields
+# Non-developers can customize this file to create different interview workflows
+
+workflow:
+  name: "HR Phone Screening"
+  description: "Standard phone screening for technical positions"
+  timeout_seconds: 1800  # 30 minutes
+  language: "vi"  # Vietnamese
+
+tasks:
+  - id: "personal"
+    name: "Personal Information"
+    description: "Chào mừng và xác nhận thông tin cá nhân"
+    instructions: |
+      Bạn là trợ lý HR thân thiện.
+      Mục tiêu: Chào ứng viên và xác nhận thông tin cá nhân bắt buộc.
+      
+      Quy tắc:
+      - Hãy giới thiệu bản thân bạn là trợ lý ảo của công ty, sau đó hỏi họ tên và vị trí ứng tuyển.
+      - Bắt buộc: Họ tên, vị trí ứng tuyển.
+      - Nếu thiếu thông tin, phải hỏi bổ sung cho đủ trước khi chuyển bước.
+      - Không tóm tắt hoặc đọc lại dữ liệu cá nhân đã thu thập.
+      - Không hỏi "cần hỗ trợ gì thêm" ở bước này.
+      - QUAN TRỌNG: Không cảm ơn, không kết thúc cuộc gọi, không nói "sẽ liên hệ lại".
+      - Chỉ xác nhận thông tin ngắn gọn khi xong bước này, chờ hệ thống chuyển bước tiếp.
+      - Giọng điệu chuyên nghiệp, ấm áp, rõ ràng.
+    
+    on_enter_prompt: "Chào ứng viên lịch sự, sau đó hỏi họ tên và vị trí ứng tuyển."
+    
+    tool_name: "record_personal_info"
+    tool_description: "Ghi nhận thông tin cá nhân của ứng viên"
+    
+    fields:
+      - name: "full_name"
+        type: "string"
+        required: true
+        description: "Họ và tên đầy đủ của ứng viên"
+        validation:
+          min_length: 2
+          error_message: "Họ tên phải có ít nhất 2 ký tự"
+      
+      - name: "applied_position"
+        type: "string"
+        required: true
+        description: "Vị trí công việc ứng viên đang ứng tuyển"
+        validation:
+          min_length: 2
+          error_message: "Vị trí ứng tuyển phải có ít nhất 2 ký tự"
+
+  - id: "experience"
+    name: "Work Experience"
+    description: "Xác nhận kinh nghiệm làm việc"
+    instructions: |
+      Mục tiêu: Thu thập thông tin kinh nghiệm làm việc.
+      
+      Quy tắc:
+      - Hỏi số năm kinh nghiệm làm việc
+      - Hỏi công ty gần nhất và vị trí
+      - Hỏi mô tả công việc chính hiện tại/trước đây
+      - Không cần chi tiết quá, chỉ tóm tắt ngắn gọn
+      - Không tóm tắt hoặc đọc lại thông tin
+      - Không hỏi "còn gì thêm không"
+      - Giọng điệu chuyên nghiệp, quan tâm
+    
+    on_enter_prompt: "Hỏi về kinh nghiệm làm việc của ứng viên: số năm kinh nghiệm, công ty gần nhất."
+    
+    tool_name: "record_work_experience"
+    tool_description: "Ghi nhận kinh nghiệm làm việc của ứng viên"
+    
+    fields:
+      - name: "years_of_experience"
+        type: "integer"
+        required: true
+        description: "Số năm kinh nghiệm làm việc"
+        validation:
+          min: 0
+          max: 50
+          error_message: "Số năm kinh nghiệm phải từ 0 đến 50"
+      
+      - name: "current_company"
+        type: "string"
+        required: true
+        description: "Công ty hiện tại hoặc gần nhất"
+        validation:
+          min_length: 2
+      
+      - name: "current_position"
+        type: "string"
+        required: true
+        description: "Vị trí công việc hiện tại hoặc gần nhất"
+        validation:
+          min_length: 2
+      
+      - name: "job_responsibilities"
+        type: "string"
+        required: true
+        description: "Mô tả ngắn gọn công việc chính"
+        validation:
+          min_length: 10
+          error_message: "Vui lòng mô tả ít nhất 10 ký tự"
+
+  - id: "fit"
+    name: "Fit Assessment"
+    description: "Đánh giá mức độ phù hợp"
+    instructions: |
+      Mục tiêu: Đánh giá mức độ phù hợp về mức lương kỳ vọng và thời gian onboard.
+      
+      Quy tắc:
+      - Hỏi mức lương kỳ vọng (gross)
+      - Hỏi thời gian có thể bắt đầu làm việc (số ngày notice)
+      - Không đưa ra đánh giá hoặc bình luận về mức lương
+      - Không tóm tắt hoặc đọc lại thông tin
+      - Chỉ ghi nhận và chuyển bước tiếp
+    
+    on_enter_prompt: "Hỏi mức lương kỳ vọng và thời gian có thể bắt đầu làm việc."
+    
+    tool_name: "record_fit_assessment"
+    tool_description: "Ghi nhận đánh giá mức độ phù hợp"
+    
+    fields:
+      - name: "expected_salary"
+        type: "integer"
+        required: true
+        description: "Mức lương gross kỳ vọng (VNĐ)"
+        validation:
+          min: 1000000
+          max: 200000000
+          error_message: "Mức lương phải từ 1 triệu đến 200 triệu VNĐ"
+      
+      - name: "notice_period_days"
+        type: "integer"
+        required: true
+        description: "Số ngày notice period (thời gian bắt đầu)"
+        validation:
+          min: 0
+          max: 90
+          error_message: "Notice period phải từ 0 đến 90 ngày"
+
+  - id: "additional"
+    name: "Additional Information"
+    description: "Kiểm tra thông tin bổ sung & xác thực"
+    instructions: |
+      Mục tiêu: Thu thập thông tin bổ sung về khả năng sẵn sàng.
+      
+      Quy tắc:
+      - Hỏi về khả năng tham gia phỏng vấn technical trong tuần tới
+      - Hỏi khung giờ nào thuận tiện nhất (sáng/chiều)
+      - Không tóm tắt hoặc đọc lại thông tin
+      - Chỉ ghi nhận và chuyển bước tiếp
+    
+    on_enter_prompt: "Hỏi về khả năng tham gia phỏng vấn technical và khung giờ thuận tiện."
+    
+    tool_name: "record_additional_info"
+    tool_description: "Ghi nhận thông tin bổ sung về lịch phỏng vấn"
+    
+    fields:
+      - name: "available_for_interview"
+        type: "boolean"
+        required: true
+        description: "Có thể tham gia phỏng vấn technical trong tuần tới không"
+      
+      - name: "preferred_time"
+        type: "string"
+        required: true
+        description: "Khung giờ thuận tiện (ví dụ: sáng, chiều, tối)"
+        validation:
+          min_length: 2
+
+  - id: "closing"
+    name: "Closing"
+    description: "Chốt buổi phonecheck, cảm ơn ứng viên sau khi kết thúc"
+    instructions: |
+      Mục tiêu: Chốt lại buổi phonecheck.
+      
+      Quy tắc:
+      1. Hỏi ứng viên có câu hỏi nào không.
+      2. Cấm trả lời câu hỏi của ứng viên, chỉ ghi nhận.
+      3. Hỏi lặp lại "Còn câu hỏi nào khác nữa không?" cho đến khi ứng viên không có câu hỏi gì thêm.
+      4. Khi ứng viên không còn câu hỏi, gọi record_closing_notes() với danh sách tất cả câu hỏi.
+      5. Sau đó cảm ơn ứng viên vì đã tham gia buổi phỏng vấn, thông báo kết quả sẽ được gửi sau.
+      - Không liệt kê lại thông tin cá nhân đã thu thập.
+    
+    on_enter_prompt: "Xác nhận rằng bạn đã có đủ thông tin cần thiết. Hỏi ứng viên có câu hỏi nào thêm không."
+    
+    tool_name: "record_closing_notes"
+    tool_description: "Ghi nhận các câu hỏi của ứng viên và hoàn thành buổi phỏng vấn"
+    
+    fields:
+      - name: "candidate_questions"
+        type: "list[string]"
+        required: false
+        description: "Danh sách các câu hỏi của ứng viên"
+        default: []
+    
+    # Special behavior for closing task
+    generate_summary: true  # Trigger summary generation after this task
+    send_webhook: true  # Send webhook after this task

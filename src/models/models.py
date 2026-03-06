@@ -13,47 +13,6 @@ class SessionUserData:
 
 
 @dataclass
-class PersonalInfo:
-    """Personal information collected from candidate."""
-
-    full_name: str
-    applied_position: str
-
-
-@dataclass
-class WorkExperience:
-    """Work experience information."""
-
-    company: str
-    title: str
-    duration: str
-
-
-@dataclass
-class FitAssessment:
-    """Assessment of candidate's fit for the position."""
-
-    relevant_skills: str
-    reason_for_leaving: str
-    expected_salary: str
-
-
-@dataclass
-class AdditionalInfo:
-    """Additional information about availability."""
-
-    availability: str
-    start_date: str
-
-
-@dataclass
-class ClosingNotes:
-    """Closing notes and candidate questions."""
-
-    candidate_questions: list[str]
-
-
-@dataclass
 class CandidateScoring:
     """Standardized scoring rubric for candidates."""
 
